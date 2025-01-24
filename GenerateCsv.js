@@ -1,4 +1,4 @@
-const puppeteer = require("puppeteer");
+const { connect } = require("puppeteer-real-browser")
 const createCsvWriter = require("csv-writer").createObjectCsvWriter;
 
 // CSV Writer Setup
@@ -14,26 +14,47 @@ const csvWriter = createCsvWriter({
 const BASE_URL = "https://dexscreener.com/solana?rankBy=trendingScoreH24&order=desc";
 
 const scrapeTopMemeCoins = async () => {
-  const browser = await puppeteer.launch({ headless: true });
-  const page = await browser.newPage();
+  const { browser, page } = await connect({
 
-  // Set User-Agent to prevent blocking
-  await page.setUserAgent(
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-  );
+    headless: false,
+
+    args: [],
+
+    customConfig: {},
+
+    turnstile: true,
+
+    connectOption: {},
+
+    disableXvfb: false,
+    ignoreAllFlags: false
+    // proxy:{
+    //     host:'<proxy-host>',
+    //     port:'<proxy-port>',
+    //     username:'<proxy-username>',
+    //     password:'<proxy-password>'
+    // }
+
+})
+
 
   console.log("Navigating to Dexscreener...");
-  await page.goto(BASE_URL, { waitUntil: "networkidle2" });
+  await page.goto(BASE_URL);
+  const data = document.querySelectorAll(".ds-dex-table-row.ds-dex-table-row-top")
+  console.log("=======+Data",data)
+  await page.screenshot({path:'screenshot.png'})
+
+  // Wait for the table to load
+  // await page.waitForSelector(".ds-dex-table-row.ds-dex-table-row-top");
 
   console.log("Extracting top 20 meme coins...");
   const coins = await page.evaluate(() => {
-    // Select all rows in the table
     const rows = Array.from(
       document.querySelectorAll(".ds-dex-table-row.ds-dex-table-row-top")
     );
-    console.log("======+Rows",rows)
 
-    // Extract top 20 rows
+    console.log("Rows found:", rows.length); // Debugging
+
     return rows.slice(0, 20).map((row) => {
       const coinName = row.querySelector(
         ".ds-table-data-cell.ds-dex-table-row-col-token .ds-dex-table-row-base-token-name-text"
@@ -43,10 +64,16 @@ const scrapeTopMemeCoins = async () => {
 
       return {
         coinName: coinName || "Unknown Coin",
-        coinLink: `https://dexscreener.com${coinLink}`,
+        coinLink: coinLink ? `https://dexscreener.com${coinLink}` : "",
       };
     });
   });
+
+  if (coins.length === 0) {
+    console.error("No coins found. Please check the selectors or page structure.");
+    await browser.close();
+    return;
+  }
 
   console.log("Extracted Coins:", coins);
 
@@ -57,6 +84,7 @@ const scrapeTopMemeCoins = async () => {
     await page.goto(coin.coinLink, { waitUntil: "networkidle2" });
 
     // Click on the "Top Traders" tab
+    await page.waitForSelector('button:contains("Top Traders")');
     await page.click('button:contains("Top Traders")');
 
     // Wait for the top traders table to load
