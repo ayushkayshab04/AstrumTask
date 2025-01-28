@@ -116,6 +116,7 @@ const scrapeTopMemeCoins = async () => {
       continue;
     }
     // Add delay to ensure data loads
+    await delay(2000)
 
     await page.waitForSelector(".custom-1kikirr",{
       waitUntil:'networkidle2'
@@ -124,8 +125,7 @@ const scrapeTopMemeCoins = async () => {
 
     // Scrape trader wallet addresses
     const traders = await page.evaluate(() => {
-      return Array.from(document.querySelectorAll(".custom-1nvxwu0")).map((row) => {
-        console.log("====Row",row)
+      return Array.from(document.querySelectorAll(".custom-1nvxwu0")).slice(0,100).map((row) => {
           const explorerLink = row
             .querySelector('a[href*="solscan.io/account"]')
             ?.getAttribute("href");
@@ -144,7 +144,7 @@ const scrapeTopMemeCoins = async () => {
     
     // Add a delay between coins to avoid rate limiting
     // await page.waitForTimeout(1000);
-    await delay(5000)
+    await delay(2000)
   }
 
   // Optionally, write data to CSV if needed
@@ -164,7 +164,7 @@ const scrapeTopMemeCoins = async () => {
   await csvWriter.writeRecords(allTraders);
 
   console.log("Top traders successfully saved to top_traders.csv!");
-  console.log("Top Traders Data:", topTradersData); // Optionally log the object
+  // console.log("Top Traders Data:", topTradersData); // Optionally log the object
   await browser.close();
 };
 
