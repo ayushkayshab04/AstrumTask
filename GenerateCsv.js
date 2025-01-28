@@ -10,7 +10,6 @@ const csvWriter = createCsvWriter({
   ],
 });
 
-
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 // Dexscreener URL
@@ -32,7 +31,6 @@ const scrapeTopMemeCoins = async () => {
     ignoreAllFlags: false,
   });
 
-
   await page.setViewport({
     width: 1920,
     height: 1080,
@@ -42,17 +40,14 @@ const scrapeTopMemeCoins = async () => {
   console.log("Navigating to Dexscreener...");
   await page.goto(BASE_URL);
 
-  // Wait for the table to load
   console.log("Waiting for the table to load...");
   try {
+    await delay(3000)
     await page.waitForSelector(".ds-dex-table-row.ds-dex-table-row-top", {
       timeout: 10000, // Wait up to 10 seconds
     });
   } catch (error) {
     console.error("Table rows not found within the timeout period.");
-    await page.waitForSelector(".ds-dex-table-row.ds-dex-table-row-top", {
-        timeout: 10000, // Wait up to 10 seconds
-      });
   }
 
   console.log("Extracting top 20 meme coins...");
@@ -79,7 +74,7 @@ const scrapeTopMemeCoins = async () => {
     return;
   }
 
-  // console.log("ExtractedCoins:",coins)
+  console.log("ExtractedCoins:", coins);
 
   // Object to store coin names as keys and array of wallet addresses as values
   let topTradersData = {};
@@ -88,7 +83,7 @@ const scrapeTopMemeCoins = async () => {
     console.log(`Fetching top traders for ${coin.coinName}...`);
     await page.goto(coin.Link, { waitUntil: 'networkidle2' });
 
-    // Click on the "Top Traders" tab
+    // Click on the "Top Traders" button
     const buttonClicked = await page.evaluate(() => {
       const xpath = "//button[contains(text(), 'Top Traders')]";
       const button = document.evaluate(
@@ -100,54 +95,51 @@ const scrapeTopMemeCoins = async () => {
       ).singleNodeValue;
 
       if (button) {
-
-        button.click()
+        button.click();
         return true;
       }
       return false;
     });
 
-    // console.log("=========ButtonClicked",buttonClicked)
-
     if (buttonClicked) {
-      // console.log("Button clicked successfully.");
+      console.log(`Clicked "Top Traders" button for ${coin.coinName}`);
     } else {
-      console.log(`Unable to click Top Traders button for ${coin.coinName}`);
+      console.log(`Unable to click "Top Traders" button for ${coin.coinName}`);
       continue;
     }
+
     // Add delay to ensure data loads
-    await delay(2000)
+    await delay(2000);
 
-    await page.waitForSelector(".custom-1kikirr",{
-      waitUntil:'networkidle2'
+    await page.waitForSelector(".custom-1kikirr", {
+      waitUntil: 'networkidle2'
     });
-
 
     // Scrape trader wallet addresses
     const traders = await page.evaluate(() => {
-      return Array.from(document.querySelectorAll(".custom-1nvxwu0")).slice(0,100).map((row) => {
-          const explorerLink = row
-            .querySelector('a[href*="solscan.io/account"]')
-            ?.getAttribute("href");
-          const walletAddress = explorerLink
-            ? explorerLink.split("/account/")[1]
-            : "";
-          return walletAddress;
-        })
-        .filter(address => address !== ""); // Filter out empty addresses
+      return Array.from(document.querySelectorAll(".custom-1nvxwu0")).slice(0, 100).map((row) => {
+        const explorerLink = row
+          .querySelector('a[href*="solscan.io/account"]')
+          ?.getAttribute("href");
+        const walletAddress = explorerLink
+          ? explorerLink.split("/account/")[1]
+          : "";
+        return walletAddress;
+      }).filter(address => address !== ""); 
     });
 
-    // Add the traders to the result object
-    topTradersData[coin.coinName] = traders;
+    // each coin has a unique entry
+    if (!topTradersData[coin.coinName]) {
+      topTradersData[coin.coinName] = [];
+    }
+    topTradersData[coin.coinName].push(...traders);
 
     console.log(`Found ${traders.length} traders for ${coin.coinName}`);
     
-    // Add a delay between coins to avoid rate limiting
-    // await page.waitForTimeout(1000);
-    await delay(2000)
+    // Add a delay between coins 
+    await delay(2000);
   }
 
-  // Optionally, write data to CSV if needed
   let allTraders = [];
   for (let coinName in topTradersData) {
     const traders = topTradersData[coinName];
@@ -164,7 +156,6 @@ const scrapeTopMemeCoins = async () => {
   await csvWriter.writeRecords(allTraders);
 
   console.log("Top traders successfully saved to top_traders.csv!");
-  // console.log("Top Traders Data:", topTradersData); // Optionally log the object
   await browser.close();
 };
 
