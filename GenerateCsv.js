@@ -43,9 +43,7 @@ const scrapeTopMemeCoins = async () => {
   console.log("Waiting for the table to load...");
   try {
     await delay(3000)
-    await page.waitForSelector(".ds-dex-table-row.ds-dex-table-row-top", {
-      timeout: 10000, // Wait up to 10 seconds
-    });
+    await page.waitForSelector(".ds-dex-table-row.ds-dex-table-row-top");
   } catch (error) {
     console.error("Table rows not found within the timeout period.");
   }
@@ -71,10 +69,11 @@ const scrapeTopMemeCoins = async () => {
   if (coins.length === 0) {
     console.error("No coins found. Please check the selectors or page structure.");
     await page.screenshot({ path: "debug_no_coins_found.png" });
+    browser.close()
     return;
   }
 
-  console.log("ExtractedCoins:", coins);
+  // console.log("ExtractedCoins:", coins);
 
   // Object to store coin names as keys and array of wallet addresses as values
   let topTradersData = {};

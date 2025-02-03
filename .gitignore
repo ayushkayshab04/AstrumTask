@@ -25,6 +25,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+
 # local env files
 .env*.local
 
@@ -34,6 +35,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+#datafiles
+top_traders.csv
 
 #env
 .env
